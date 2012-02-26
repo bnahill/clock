@@ -5,6 +5,8 @@
 
 #define BIT(x) (1 << x)
 
+#define FLASH_LEDS 0
+
 // Pin 1.0
 #define LED1_OUT  P1OUT
 #define LED1_DIR  P1DIR
@@ -27,7 +29,6 @@
 // Should be less than 32768/TICK_PER_S...
 #define DUTY_CYCLE_LEN  3000
 
-static volatile uint16_t tick;
 static int16_t error;
 
 // State for Marsaglia's MWC RNG algorithm
@@ -49,6 +50,7 @@ int main(void) {
 	uint8_t cnt;
 	
 	WDTCTL = WDTPW | WDTHOLD;
+
 	// Set MCLK for 16MHz
 	DCOCTL = CALDCO_1MHZ;
 	BCSCTL1 = CALBC1_1MHZ;
@@ -56,13 +58,15 @@ int main(void) {
 	BCSCTL2 |= 0b00000110;
 
 	__enable_interrupt();
+
+#if FLASH_LEDS
+	LED1_DIR |= LED1_MASK;
+	LED1_OUT |= LED1_MASK;
+
+	LED2_DIR |= LED2_MASK;
+	LED2_OUT &= ~LED2_MASK;
+#endif
 	
-	//LED1_DIR |= LED1_MASK;
-	//LED1_OUT |= LED1_MASK;
-
-	//LED2_DIR |= LED2_MASK;
-	//LED2_OUT &= ~LED2_MASK;
-
 	TICK_OUT = TICK_OUT & ~(TICKP_MASK | TICKN_MASK);
 	TICK_DIR |= TICKP_MASK | TICKN_MASK;
 
@@ -74,21 +78,21 @@ int main(void) {
 	TA0CCR1 = DUTY_CYCLE_LEN;
 	TA0CCTL1 = 0b0000000000110000;
 
-	// Switch to 32kHz/1 crystal for MCLK/SMCLK
-	///BCSCTL2 = 0b11001000;
-
 	ticks = 0;
 	error = 0;
 	cnt = 0;
 	while(1){
 		LPM3;
-		tick -= 1;
 		if((cnt++ & TPS_MASK) == 0){
 			error -= 1;
 		}
+		
 		// Move on to next tick
-		//LED2_OUT ^= LED2_MASK;
-		//LED1_OUT ^= LED1_MASK;
+#if FLASH_LEDS
+		LED2_OUT ^= LED2_MASK;
+		LED1_OUT ^= LED1_MASK;
+#endif
+
 		if(error > (30 * TICK_PER_S)){
 			continue;
 		}
@@ -118,29 +122,25 @@ int main(void) {
 void rng_init(void){
 	uint16_t ticks;
 
-	TA0CTL = 0;
-
-	// Set up timer for some short intervals
+	WDTCTL = WDTPW | 0b0000000000011111;
+	
 	TA0R = 0;
-	TA0CCR0 = 150;
-	TA0CTL = 0b0000000100010010;
-
-	/*
-	TA1R = 0;
 	// Configure timer for fast up-counting
-	TA1CTL = 0b0000001000100000;
+	TA0CTL = 0b0000001000100000;
 
 	// Perform RNG
 	for(ticks = 0; ticks < 64; ticks++){
-		while(tick == 0);
-		rng_state.seed = (rng_state.seed << 1) | (TA1R & 0x0001);
+		// Wait for watchdog interrupt
+		while((IFG1 & WDTIFG) == 0);
+		IFG1 &= ~WDTIFG;
+		rng_state.seed = (rng_state.seed << 1) | (TA0R & 0x0001);
 		BCSCTL1 += 5;
 	}
+	
 	BCSCTL1 -= 5 * 64;
 	
-	TA1CTL = 0;
+	WDTCTL = WDTPW | WDTHOLD;
 	TA0CTL = 0;
-	*/
 }
 
 uint32_t rng_next(void){
@@ -155,21 +155,23 @@ uint16_t rng_next16(void){
 	return rng_state.m_w;
 }
 
+
 #ifdef __MSP430G2231
+#define TA0IV_TAIFG TAIV_TAIFG
+#define TA0IV_TACCR1 TAIV_TACCR1
 __attribute__((interrupt(TIMERA1_VECTOR)))
 #else
 __attribute__((interrupt(TIMER0_A1_VECTOR)))
 #endif
 void timer_tick_isr(void){
 	switch(TA0IV){
-	case TAIV_TAIFG:
-		tick += 1;
+	case TA0IV_TAIFG:
 		// Clear that flag
 		TA0CTL &= ~0x0001;
 		TA0CCTL1 |= CCIE;
 		LPM3_EXIT;
 		break;
-	case TAIV_TACCR1:
+	case TA0IV_TACCR1:
 		TICK_OUT = TICK_OUT & ~(TICKP_MASK | TICKN_MASK);
 		// Clear that flag
 		TA0CCTL1 &= ~CCIE;
