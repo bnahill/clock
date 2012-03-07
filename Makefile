@@ -1,8 +1,9 @@
 TARGET=clocky
 SOURCES=clocky.c
 
+MCU=msp430g2452
 #MCU=msp430g2553
-MCU=msp430g2231
+#MCU=msp430g2231
 
 CFLAGS   = -mmcu=$(MCU) -g -Os -Wall -Wunused $(INCLUDES)   
 ASFLAGS  = -mmcu=$(MCU) -x assembler-with-cpp -Wa,-gstabs

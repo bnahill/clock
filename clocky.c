@@ -5,7 +5,7 @@
 
 #define BIT(x) (1 << x)
 
-#define FLASH_LEDS 0
+#define FLASH_LEDS 1
 
 // Pin 1.0
 #define LED1_OUT  P1OUT
@@ -23,13 +23,14 @@
 #define TICKP_MASK BIT(4)
 #define TICKN_MASK BIT(5)
 
-#define TICK_PER_S      4
-#define TPS_MASK        0b11
+#define TICK_PER_S      8
+#define TPS_MASK        0b111
 // The number of ticks (at 32kHz) to wait before disabling the output
 // Should be less than 32768/TICK_PER_S...
-#define DUTY_CYCLE_LEN  3000
+#define PULSE_WIDTH  3000
 
 static int16_t error;
+static volatile uint8_t wdt_tick = 0;
 
 // State for Marsaglia's MWC RNG algorithm
 static union {
@@ -43,9 +44,9 @@ static union {
 void rng_init(void);
 uint32_t rng_next(void);
 uint16_t rng_next16(void);
+inline void do_tick(void);
 
 int main(void) {
-	uint8_t ticks;
 	uint16_t rand;
 	uint8_t cnt;
 	
@@ -75,10 +76,9 @@ int main(void) {
 	TA0R = 0;
 	TA0CCR0 = 32768 / TICK_PER_S;
 	TA0CTL = 0b0000000100010010;
-	TA0CCR1 = DUTY_CYCLE_LEN;
+	TA0CCR1 = PULSE_WIDTH;;
 	TA0CCTL1 = 0b0000000000110000;
 
-	ticks = 0;
 	error = 0;
 	cnt = 0;
 	while(1){
@@ -88,42 +88,44 @@ int main(void) {
 		}
 		
 		// Move on to next tick
-#if FLASH_LEDS
-		LED2_OUT ^= LED2_MASK;
-		LED1_OUT ^= LED1_MASK;
-#endif
 
-		if(error > (30 * TICK_PER_S)){
+		if(error > 30){
 			continue;
 		}
-		if(error < (-30 * TICK_PER_S)){
-			ticks += 1;
+		if(error < -30){
 			error += 1;
-			if(ticks & 0x0001){
-				TICK_OUT = (TICK_OUT & ~TICKP_MASK) | TICKN_MASK;
-			} else {
-				TICK_OUT = (TICK_OUT & ~TICKN_MASK) | TICKP_MASK;
-			}
+			do_tick();
 			continue;
 		}
 		rand = rng_next16();
 		if((rand & TPS_MASK) == 0){
-			ticks += 1;
 			error += 1;
-			if(ticks & 0x0001){
-				TICK_OUT = (TICK_OUT & ~TICKP_MASK) | TICKN_MASK;
-			} else {
-				TICK_OUT = (TICK_OUT & ~TICKN_MASK) | TICKP_MASK;
-			}
+			do_tick();
 		}
 	}
+}
+
+inline void do_tick(void){
+	static uint8_t ticks = 0;
+	ticks += 1;
+	if(ticks & 0x0001){
+		TICK_OUT = (TICK_OUT & ~TICKP_MASK) | TICKN_MASK;
+	} else {
+		TICK_OUT = (TICK_OUT & ~TICKN_MASK) | TICKP_MASK;
+	}
+#if FLASH_LEDS
+	LED2_OUT ^= LED2_MASK;
+	LED1_OUT ^= LED1_MASK;
+#endif
 }
 
 void rng_init(void){
 	uint16_t ticks;
 
 	WDTCTL = WDTPW | 0b0000000000011111;
-	
+	IFG1 &= ~WDTIFG;
+	IE1 |= WDTIE;
+
 	TA0R = 0;
 	// Configure timer for fast up-counting
 	TA0CTL = 0b0000001000100000;
@@ -131,7 +133,8 @@ void rng_init(void){
 	// Perform RNG
 	for(ticks = 0; ticks < 64; ticks++){
 		// Wait for watchdog interrupt
-		while((IFG1 & WDTIFG) == 0);
+		while(wdt_tick == 0);
+		wdt_tick = 0;
 		IFG1 &= ~WDTIFG;
 		rng_state.seed = (rng_state.seed << 1) | (TA0R & 0x0001);
 		BCSCTL1 += 5;
@@ -139,6 +142,7 @@ void rng_init(void){
 	
 	BCSCTL1 -= 5 * 64;
 	
+	IE1 &= ~WDTIE;
 	WDTCTL = WDTPW | WDTHOLD;
 	TA0CTL = 0;
 }
@@ -178,5 +182,11 @@ void timer_tick_isr(void){
 		TA0CCTL1 &= ~0x0001;
 		break;
 	}
+}
+
+__attribute__((interrupt(WDT_VECTOR)))
+void wdt_isr(void){
+	wdt_tick = 1;
+	IFG1 &= ~WDTIFG;
 }
 
