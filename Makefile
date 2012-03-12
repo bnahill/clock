@@ -5,7 +5,8 @@ MCU=msp430g2452
 #MCU=msp430g2553
 #MCU=msp430g2231
 
-CFLAGS   = -mmcu=$(MCU) -g -Os -Wall -Wunused $(INCLUDES)   
+#CFLAGS   = -mmcu=$(MCU) -g -Os -Wall -Wunused $(INCLUDES)   
+CFLAGS   = -mmcu=$(MCU) -g -O0 -Wall -Wunused $(INCLUDES)   
 ASFLAGS  = -mmcu=$(MCU) -x assembler-with-cpp -Wa,-gstabs
 LDFLAGS  = -mmcu=$(MCU) -Wl,-Map=$(TARGET).map
 
@@ -31,19 +32,19 @@ OBJECTS  = $(SOURCES:.c=.o)
 all: $(TARGET).elf $(TARGET).hex $(TARGET).txt
 
 $(TARGET).elf: $(OBJECTS)
-	echo "Linking $@"
+	@echo "Linking $@"
 	$(CC) $(OBJECTS) $(LDFLAGS) $(LIBS) -o $@
-	echo
-	echo ">>>>> Size of firmware <<<<<"
+	@echo
+	@echo ">>>>> Size of firmware <<<<<"
 	$(SIZE) $(TARGET).elf
-	echo
+	@echo
 
 %.hex: %.elf
 	$(OBJCOPY) -O ihex $< $@
 %.txt: %.hex
 	$(MAKETXT) -O $@ -TITXT $< -I
 %.o: %.c
-	echo "Compiling $<"
+	@echo "Compiling $<"
 	$(CC) -c $(CFLAGS) -o $@ $<
 %.lst: %.c
 	$(CC) -c $(CFLAGS) -Wa,-anlhd $< > $@
@@ -53,7 +54,7 @@ ifneq ($(MAKECMDGOALS), clean)
 endif
 
 %.d: %.c
-	echo "Generating dependencies $@ from $<"
+	@echo "Generating dependencies $@ from $<";
 	$(CC) -M ${CFLAGS} $< >$@
 
 #.SILENT:

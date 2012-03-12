@@ -1,0 +1,1 @@
+This is based on the MSP430 Launchpad and should support all 4 of the various devices that TI has provided with this in the past. Change the chip name in Makefile and adjust paths according to your MSPGCC configuration.

@@ -27,7 +27,7 @@
 #define TPS_MASK        0b111
 // The number of ticks (at 32kHz) to wait before disabling the output
 // Should be less than 32768/TICK_PER_S...
-#define PULSE_WIDTH  3000
+#define PULSE_WIDTH  2000
 
 static int16_t error;
 static volatile uint8_t wdt_tick = 0;
@@ -49,6 +49,7 @@ inline void do_tick(void);
 int main(void) {
 	uint16_t rand;
 	uint8_t cnt;
+	static volatile uint16_t counter;
 	
 	WDTCTL = WDTPW | WDTHOLD;
 
