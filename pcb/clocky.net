@@ -1,7 +1,7 @@
 (export (version D)
   (design
     (source /home/ben/git/clock/pcb/clocky.sch)
-    (date "Mon 09 Feb 2015 11:44:12 PM EST")
+    (date "Tue 10 Feb 2015 11:13:14 PM EST")
     (tool "eeschema (2013-may-18)-stable"))
   (components
     (comp (ref U3)
@@ -31,17 +31,20 @@
       (sheetpath (names /) (tstamps /))
       (tstamp 54D97E15))
     (comp (ref X1)
-      (value CRYSTAL)
+      (value SC20S-12.5PF20PPM)
+      (footprint SC-20S)
       (libsource (lib device) (part CRYSTAL))
       (sheetpath (names /) (tstamps /))
       (tstamp 54D97E76))
     (comp (ref C1)
       (value C)
+      (footprint SM0402)
       (libsource (lib device) (part C))
       (sheetpath (names /) (tstamps /))
       (tstamp 54D97F10))
     (comp (ref C2)
       (value C)
+      (footprint SM0402)
       (libsource (lib device) (part C))
       (sheetpath (names /) (tstamps /))
       (tstamp 54D97F1D))
@@ -112,6 +115,22 @@
       (pins
         (pin (num 1) (name 1) (type passive))
         (pin (num 2) (name 2) (type passive))))
+    (libpart (lib device) (part R)
+      (description Resistance)
+      (footprints
+        (fp R?)
+        (fp SM0603)
+        (fp SM0805)
+        (fp R?-*)
+        (fp SM1206))
+      (fields
+        (field (name Reference) R)
+        (field (name Value) R)
+        (field (name Footprint) ~)
+        (field (name Datasheet) ~))
+      (pins
+        (pin (num 1) (name ~) (type passive))
+        (pin (num 2) (name ~) (type passive))))
     (libpart (lib conn) (part CONN_2)
       (description "Symbole general de connecteur")
       (fields
@@ -151,7 +170,9 @@
     (libpart (lib clocky) (part PIC16F1709_QFN20)
       (fields
         (field (name Reference) U)
-        (field (name Value) PIC16F1709_QFN20))
+        (field (name Value) PIC16F1709_QFN20)
+        (field (name Footprint) ~)
+        (field (name Datasheet) ~))
       (pins
         (pin (num 1) (name ~MCLR~/RA3) (type input))
         (pin (num 2) (name RC5) (type input))
@@ -177,29 +198,16 @@
     (libpart (lib clocky) (part TLV61220)
       (fields
         (field (name Reference) U)
-        (field (name Value) TLV61220))
+        (field (name Value) TLV61220)
+        (field (name Footprint) ~)
+        (field (name Datasheet) ~))
       (pins
         (pin (num 1) (name SW) (type input))
         (pin (num 2) (name GND) (type input))
         (pin (num 3) (name EN) (type input))
         (pin (num 4) (name FB) (type input))
         (pin (num 5) (name VOUT) (type input))
-        (pin (num 6) (name VBAT) (type input))))
-    (libpart (lib device) (part R)
-      (description Resistance)
-      (footprints
-        (fp R?)
-        (fp R?-*)
-        (fp SM1206)
-        (fp SM*))
-      (fields
-        (field (name Reference) R)
-        (field (name Value) R)
-        (field (name Footprint) ~)
-        (field (name Datasheet) ~))
-      (pins
-        (pin (num 1) (name ~) (type passive))
-        (pin (num 2) (name ~) (type passive)))))
+        (pin (num 6) (name VBAT) (type input)))))
   (libraries
     (library (logical device)
       (uri /usr/share/kicad/library/device.lib))
